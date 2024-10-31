@@ -7,11 +7,14 @@
 | Base XGB - Numeric Feat. Engg.         | 0.89064               |
 | LightGB Alternative                    | 0.89239               |
 | CatBoosting Alternative                | 0.89485               |
-| **AutoML Ensemble - V1**               | 0.97272               |
+| AutoML Ensemble - V1                   | 0.97272               |
 | Ensemble Basic - V1                    | 0.95725               |
 | Ensemble Cat & LightGB                 | 0.95837               |
 | Ensemble CatBoost                      | 0.95202               |
 | Ensemble LightGB                       | 0.95945               |
+| ** Best of the Best - Ensemble **      | ** 0.97355 **         |
+| ** CatBoost Regularized **             | ** 0.97182 **         |     
+
 
 
 

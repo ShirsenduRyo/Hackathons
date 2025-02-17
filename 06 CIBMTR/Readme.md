@@ -1,33 +1,33 @@
+# Description
+Improving survival predictions for allogeneic HCT patients is a vital healthcare challenge. Current predictive models often fall short in addressing disparities related to socioeconomic status, race, and geography. Addressing these gaps is crucial for enhancing patient care, optimizing resource utilization, and rebuilding trust in the healthcare system.
+
+This competition aims to encourage participants to advance predictive modeling by ensuring that survival predictions are both precise and fair for patients across diverse groups. By using synthetic data—which mirrors real-world situations while protecting patient privacy—participants can build and improve models that more effectively consider diverse backgrounds and conditions.
+
+You’re challenged to develop advanced predictive models for allogeneic HCT that enhance both accuracy and fairness in survival predictions. The goal is to address disparities by bridging diverse data sources, refining algorithms, and reducing biases to ensure equitable outcomes for patients across diverse race groups. Your work will help create a more just and effective healthcare environment, ensuring every patient receives the care they deserve.        
+
+# Evaluation
+## Evaluation Criteria
+The evaluation of prediction accuracy in the competition will involve a specialized metric known as the Stratified Concordance Index (C-index), adapted to consider different racial groups independently. This method allows us to gauge the predictive performance of models in a way that emphasizes equitability across diverse patient populations, particularly focusing on racial disparities in transplant outcomes.
+
+## Concordance index
+It represents the global assessment of the model discrimination power: this is the model’s ability to correctly provide a reliable ranking of the survival times based on the individual risk scores.
+
+The concordance index is a value between 0 and 1 where:
+
+* 0.5 is the expected result from random predictions,
+* 1.0 is a perfect concordance and,
+* 0.0 is perfect anti-concordance (multiply predictions with -1 to get 1.0)
+
+
 # Rank
-**136/3858**
-
-# Model Performances
-| **Model Name**                         | **Public Score**      | **Private Score** |
-|:--------------------------------------:|:---------------------:|:-----------------:|
-| Baseline XGB - Numeric                 | 0.79058               |0.78857           |
-| Baseline XGB - Numeric - AUC Tuning    | 0.86162               |0.85674           |
-| Base XGB - All Features Numeric        | 0.88693               |0.88438           |
-| Base XGB - Numeric Feat. Engg.         | 0.89064               |0.88246           |
-| LightGB Alternative                    | 0.89239               |0.88536           |
-| CatBoosting Alternative                | 0.89485               |0.88801           |
-| AutoML Ensemble - V1                   | 0.97272               |0.96804           |
-| Ensemble Basic - V1                    | 0.95725               |0.95264           |
-| Ensemble Cat & LightGB                 | 0.95837               |0.95340           |
-| Ensemble CatBoost                      | 0.95202               |0.94617           |
-| Ensemble LightGB                       | 0.95945               |0.95526           |
-| **Best of the Best - Ensemble**        | **0.97355**           |**0.96894**       |
-| **CatBoost Regularized**               | **0.97182**           |**0.96745**       |          
-
-
-
 
 
 
 #### Competetion
-@misc{playground-series-s4e10,
-    author = {Walter Reade, Ashley Chow},
-    title = {Loan Approval Prediction},
-    publisher = {Kaggle},
+@misc{equity-post-HCT-survival-predictions,
+    author = {Tushar Deshpande and Deniz Akdemir and Walter Reade and Ashley Chow and Maggie Demkin and Yung-Tsi Bolon},
+    title = {CIBMTR - Equity in post-HCT Survival Predictions},
     year = {2024},
-    url = {https://kaggle.com/competitions/playground-series-s4e10}
+    howpublished = {\url{https://kaggle.com/competitions/equity-post-HCT-survival-predictions}},
+    note = {Kaggle}
 }

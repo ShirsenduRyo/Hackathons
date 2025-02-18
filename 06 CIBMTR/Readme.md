@@ -22,6 +22,11 @@ The concordance index is a value between 0 and 1 where:
 # Rank
 
 
+# Model Performances
+| **Model Name**                         | **Public Score**      | **Private Score** |
+|:--------------------------------------:|:---------------------:|:-----------------:|
+| Baseline XGB                           |                |NA          |
+
 
 #### Competetion
 @misc{equity-post-HCT-survival-predictions,

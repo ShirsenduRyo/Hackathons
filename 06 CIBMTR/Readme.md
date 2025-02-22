@@ -25,7 +25,7 @@ The concordance index is a value between 0 and 1 where:
 # Model Performances
 | **Model Name**                         | **Public Score**      | **Private Score** |
 |:--------------------------------------:|:---------------------:|:-----------------:|
-| Baseline XGB                           |                |NA          |
+|  XGBoost with KaplanMeier                           | 0.682               |NA          |
 
 
 #### Competetion

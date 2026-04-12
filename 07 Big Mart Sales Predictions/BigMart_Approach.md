@@ -25,7 +25,7 @@ EDA was conducted in `01_EDA.ipynb` across 11 structured sections.
 |---|---|---|
 | `Item_Weight` | 1,463 missing (~17%) | Per-item mean across combined train+test |
 | `Item_Visibility` | 526 rows with exactly zero | Per-item mean of non-zero rows only |
-| `Outlet_Size` | 2,410 missing (~28%) | Per-Outlet_Type mode |
+| `Outlet_Size` | 2,410 missing (~28%) | Per-Outlet_Type mode + `Outlet_Size_Was_Missing` flag preserved |
 | `Item_Fat_Content` | 5 inconsistent categories | Normalised to 2 canonical values; NC items → Non-Edible |
 
 ### 2.2 Key Signals from EDA
@@ -51,6 +51,9 @@ All features were constructed to avoid target leakage. Key additions beyond raw 
 | `MRP_Bin` (16 bins) | Quantile binning captures non-linear MRP effects. |
 | `Item_Cat_x_Outlet` | Item category × outlet type interaction — e.g. non-food sells poorly in grocery. |
 | `Is_Grocery` | Binary flag enabling hard split between retail environments. |
+| `Outlet_Size_Was_Missing` | Binary flag: outlets that didn't report size cluster meaningfully. |
+| `Outlet_Age_x_Type` | Outlet age × outlet type ordinal — older Type3 behaves differently from older Grocery. |
+| `Weight_x_MRP` | Item weight × MRP — dense/expensive items (e.g. edible oil) have distinct sales patterns. |
 
 ### 3.1 KFold Target Encoding
 
@@ -68,15 +71,27 @@ A hard split was introduced between Grocery Store rows (n=1,083, mean sales ≈3
 
 ### 4.2 Hyperparameter Optimisation via Optuna
 
-Each model was tuned using **Optuna** with a TPE (Tree-structured Parzen Estimator) sampler and `MedianPruner` to kill underperforming trials early. Six independent studies were run — one per model type per split — totalling **480 trials**. The objective in every study was 5-fold out-of-fold RMSE on the log-transformed target.
+Each model was tuned using **Optuna** with a TPE (Tree-structured Parzen Estimator) sampler and `MedianPruner` to kill underperforming trials early. Six independent studies were run — one per model type per split — totalling **600 trials** (raised from 480; grocery budget increased to 100 trials to match supermarket, as small data warrants more regularisation search). The objective in every study was 5-fold out-of-fold RMSE on the log-transformed target.
+
+Search space corrections applied in v8:
+- XGB `gamma` range narrowed from 0–5 → 0–1 (values >1 prune nearly all splits on this dataset size)
+- XGB `colsample_bytree` and `colsample_bylevel` floors raised from 0.4 → 0.5 to avoid simultaneous column starvation
 
 ### 4.3 Three Standalone Models
 
-XGBoost, LightGBM, and CatBoost were each benchmarked independently (`05_XGBoost_Standalone.ipynb`, `06_LightGBM_Standalone.ipynb`, `07_CatBoost_Standalone.ipynb`) before combining, to identify which learner dominates on each split and establish individual model ceilings.
+XGBoost, LightGBM, and CatBoost were each benchmarked independently before combining, to identify which learner dominates on each split and establish individual model ceilings.
 
 ### 4.4 Stacking Ensemble
 
-The final architecture (`04_Full_Solution.ipynb`) stacks all three base learners. Out-of-fold predictions from XGBoost, LightGBM, and CatBoost feed a **BayesianRidge meta-learner**. The three OOF columns are passed through a `StandardScaler` before the meta-learner — tree models don't need scaling, but BayesianRidge as a linear model benefits from normalised inputs. The ensemble is trained and evaluated independently per split.
+The final architecture stacks all three base learners. Out-of-fold predictions from XGBoost, LightGBM, and CatBoost feed a **BayesianRidge meta-learner**. 
+
+From v8, the meta-learner receives **5 inputs** instead of 3: the three OOF prediction columns plus `Item_MRP` and `TE_Outlet_Identifier`. This gives BayesianRidge real signal to differentiate predictions across price bands and outlet-level effects — when all three base OOF columns are highly correlated (>0.97), the additional raw features provide the variance the meta-learner needs to improve on a simple average. OOF pairwise correlations are printed at runtime as a diagnostic.
+
+All 5 meta inputs are passed through a `StandardScaler` before BayesianRidge. The ensemble is trained and evaluated independently per split.
+
+### 4.5 Pseudo-labelling
+
+After round-1 predictions are generated, a pseudo-label round is run on confident test rows — those whose predictions deviate more than 0.5σ from the mean. These rows are appended to training data and the full stacking pipeline is retrained. The pseudo-label submission is only adopted if its OOF RMSE improves on round-1; otherwise the original predictions are kept.
 
 ---
 
@@ -84,15 +99,21 @@ The final architecture (`04_Full_Solution.ipynb`) stacks all three base learners
 
 ### 5.1 Why No Pre-hoc Correlation Filtering
 
-With only ~22 features, pre-hoc correlation filtering was deliberately avoided. Tree models handle correlated features natively — they simply select the more informative one at each split. Removing correlated features before training risks discarding complementary signal (e.g. `Item_MRP` and `TE_Item_Identifier` are correlated but each carries unique variance). **Permutation importance post-training** is a safer, model-aware alternative.
+With ~22 features, pre-hoc correlation filtering was deliberately avoided. Tree models handle correlated features natively — they simply select the more informative one at each split. Removing correlated features before training risks discarding complementary signal (e.g. `Item_MRP` and `TE_Item_Identifier` are correlated but each carries unique variance). **Permutation importance post-training** is a safer, model-aware alternative.
 
 ### 5.2 Permutation Importance
 
-After final model fitting, permutation importance (20 repeats, `sklearn.inspection`) was computed per split. Features where shuffling causes no RMSE degradation are flagged as drop candidates. A **consensus drop list** identifies features useless in both splits simultaneously — a tighter criterion than single-split analysis. This avoids the false positives endemic to split-gain importance, which over-rates high-cardinality columns.
+After final model fitting, permutation importance (20 repeats, `sklearn.inspection`) was computed per split. Features where shuffling causes no RMSE degradation are flagged as drop candidates. A **consensus drop list** identifies features useless in both splits simultaneously — a tighter criterion than single-split analysis.
+
+From v7 output: `Is_Grocery` and `Item_Fat_Content` were the only consensus-drop candidates. These are dropped in v8.
 
 ### 5.3 Normalisation Scope
 
-`StandardScaler` is applied **exclusively to the 3 meta-learner inputs** (XGB/LGB/CatBoost OOF predictions). Tree base models receive raw features — scaling has zero effect on split-based learners. The log1p target transformation serves as implicit output normalisation, stabilising variance and pulling the right tail of the sales distribution closer to Gaussian.
+`StandardScaler` is applied **exclusively to the 5 meta-learner inputs**. Tree base models receive raw features — scaling has zero effect on split-based learners. The log1p target transformation serves as implicit output normalisation, stabilising variance and pulling the right tail of the sales distribution closer to Gaussian.
+
+### 5.4 Prediction Clipping
+
+Final predictions are clipped at the minimum observed training sales value (~33). This is a free RMSE improvement on the lower tail with no model changes required.
 
 ---
 
@@ -105,7 +126,8 @@ After final model fitting, permutation importance (20 repeats, `sklearn.inspecti
 | `04_LightGBM_Standalone` | LightGBM standalone benchmark | 1182.0863 |
 | `05_CatBoost__Standalone` | CatBoost standalone benchmark | 1180.7270 |
 | `06_Full_Solution` | Target encoding + Grocery split + 3-model stack | 1176.7038 |
-| `07_Full_Solution_SS` | Target encoding + Grocery split + 3-model stack + StandardScaler| 1176.7031 |
+| `07_Full_Solution_SS` | + StandardScaler on meta inputs | 1176.7031 |
+| `08_Full_Solution_v8` | + 3 new features + richer meta (5 inputs) + clip + pseudo-label + Optuna fixes | 1174.4941 |
 
 The two **highest-impact single changes** across the entire pipeline were:
 

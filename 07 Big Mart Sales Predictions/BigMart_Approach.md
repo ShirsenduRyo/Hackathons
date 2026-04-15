@@ -128,6 +128,8 @@ Final predictions are clipped at the minimum observed training sales value (~33)
 | `06_Full_Solution` | Target encoding + Grocery split + 3-model stack | 1176.7038 |
 | `07_Full_Solution_SS` | + StandardScaler on meta inputs | 1176.7031 |
 | `08_Full_Solution_v8` | + 3 new features + richer meta (5 inputs) + clip + pseudo-label + Optuna fixes | 1174.4941 |
+| `10_Full_Solution_v10` | E65ntity Embeddings + Optuna fixes | 1165.0286 |
+
 
 The two **highest-impact single changes** across the entire pipeline were:
 
